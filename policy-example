@@ -1,0 +1,7 @@
+# This is an example of policy, which you must put into
+# /etc/qubes-rpc/policy/qpay in dom0
+#
+# Do NOT copy the file, but type the line below by hand!
+# It's not too long anyway...
+
+@anyvm  lightningvm  allow
