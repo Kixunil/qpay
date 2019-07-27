@@ -1,0 +1,9 @@
+[Unit]
+Description=Qpay HTTP bridge
+
+[Service]
+Type=simple
+ExecStart=/usr/local.orig/bin/qpay -b
+
+[Install]
+WantedBy=multi-user.target
