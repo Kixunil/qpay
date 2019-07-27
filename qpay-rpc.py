@@ -9,11 +9,11 @@ import binascii
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk, GLib, Gio, GObject
 
-config_file = open("/etc/qpay/qpay.conf", "r")
+config_file = open("/usr/local/etc/qpay/qpay.conf", "r")
 config = json.loads(config_file.read())
 url = config["url"]
 
-macaroon_file = open("/etc/qpay/admin.macaroon", "rb")
+macaroon_file = open("/usr/local/etc/qpay/admin.macaroon", "rb")
 macaroon_binary = macaroon_file.read()
 macaroon = binascii.hexlify(macaroon_binary)
 
