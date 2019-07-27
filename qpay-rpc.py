@@ -49,7 +49,7 @@ class EclairCommunicator:
         # Round up satoshis to be on the safe side
         return {
                 "destination": decoded["nodeId"],
-                "num_satoshis": (decoded["amount"] + 999) / 1000
+                "num_satoshis": (decoded["amount"] + 999) // 1000
         }
 
     def _query(self, command, data = {}):
