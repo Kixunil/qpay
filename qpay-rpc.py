@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 
 import requests
+import time
 import json
 import sys
 import gi
@@ -9,42 +10,113 @@ import binascii
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk, GLib, Gio, GObject
 
+class LndHttpCommunicator:
+    def __init__(self, url, macaroon):
+        self._url = url
+        self._macaroon = macaroon
+
+    def decode_invoice(self, invoice):
+        req = requests.get("https://%s/v1/payreq/%s" % (url, invoice), headers=headers)
+
+        decoded = req.json()
+
+        if "destination" not in decoded:
+            return {}
+        else:
+            return {
+                    "destination": decoded["destination"],
+                    "num_satoshis": decoded["num_satoshis"]
+            }
+
+    def pay_invoice(self, invoice):
+        headers = { "Grpc-Metadata-macaroon": self._macaroon }
+        req = requests.post("https://%s/v1/channels/transactions?payment_request=" % self._url, headers=headers, json={"payment_request": data["payreq"]})
+
+        return req.json()
+
+class EclairCommunicator:
+    def __init__(self, password, port = 8080):
+        self._password = password
+        self._port = port
+
+    def decode_invoice(self, invoice):
+        resp = self._query("parseinvoice", { "invoice": invoice })
+        if resp.status_code != 200:
+            return { "status": "invalid" }
+
+        decoded = resp.json()
+
+        # Round up satoshis to be on the safe side
+        return {
+                "destination": decoded["nodeId"],
+                "num_satoshis": (decoded["amount"] + 999) / 1000
+        }
+
+    def _query(self, command, data = {}):
+        url = "http://127.0.0.1:%d/%s" % (self._port, command)
+        resp = requests.post(url, data=data, auth=("eclair", self._password))
+        return resp
+
+    def pay_invoice(self, invoice):
+        resp = self._query("payinvoice", data = { "invoice": invoice })
+        if resp.status_code != 200:
+            msg = "Failed to execute payinvoice, status: " % resp.status_code
+            return {"error": msg }
+
+        payment_id = resp.json()
+
+        time.sleep(0.5)
+
+        while True:
+            resp = self._query("getsentinfo", data = { "id": payment_id })
+            if resp.status_code != 200:
+                msg = "Failed to execute getsentinfo, status: " % resp.status_code
+                return {"error": msg }
+
+            resp = resp.json()
+            if resp[0]["status"] == "SUCCEEDED":
+                return { "payment_preimage": resp[0]["preimage"]}
+
+            if resp[0]["status"] == "FAILED":
+                return {"error": "Payment failed" }
+
+            time.sleep(0.5)
+
+
 config_file = open("/usr/local/etc/qpay/qpay.conf", "r")
 config = json.loads(config_file.read())
-url = config["url"]
 
-macaroon_file = open("/usr/local/etc/qpay/admin.macaroon", "rb")
-macaroon_binary = macaroon_file.read()
-macaroon = binascii.hexlify(macaroon_binary)
+if config["backend"] == "lnd-http":
+    macaroon_file = open("/usr/local/etc/qpay/admin.macaroon", "rb")
+    macaroon_binary = macaroon_file.read()
+    macaroon = binascii.hexlify(macaroon_binary)
+
+    backend = LndHttpCommunicator(url = config["url"], macaroon = macaroon)
+
+elif config["backend"] == "eclair":
+    backend = EclairCommunicator(password = config["password"])
+
+else:
+    print("Unknown backend")
+    exit(1)
 
 def load_invoice(job, cancellable, data):
-    headers = { "Grpc-Metadata-macaroon": macaroon }
     result = None
 
     if "payreq" not in data:
         data["payreq"] = sys.stdin.readline().rstrip()
     
     if "decoded_req" not in data:
-        req = requests.get("https://%s/v1/payreq/%s" % (url, data["payreq"]), headers=headers)
-
-        data["decoded_req"] = json.loads(req.text)
+        data["decoded_req"] = backend.decode_invoice(invoice = data["payreq"])
 
     if "destination" not in data["decoded_req"]:
         result = {"status": "invalid"}
 
     else:
-        decoded_req = data["decoded_req"]
-        req = requests.get("https://%s/v1/graph/routes/%s/%s?num_routes=1" % (url, decoded_req["destination"], decoded_req["num_satoshis"]), headers=headers)
-
-        routes = json.loads(req.text)
-        if "routes" not in routes:
-            routes["routes"] = []
-
         result = {
                 "status": "success",
                 "payreq": data["payreq"],
                 "decoded_req": data["decoded_req"],
-                "routes": routes["routes"],
         }
 
     def finished():
@@ -53,10 +125,7 @@ def load_invoice(job, cancellable, data):
     GLib.MainLoop().get_context().invoke_full(GLib.PRIORITY_DEFAULT, finished)
 
 def pay_invoice(job, cancellable, data):
-    headers = { "Grpc-Metadata-macaroon": macaroon }
-    req = requests.post("https://%s/v1/channels/transactions?payment_request=" % url, headers=headers, json={"payment_request": data["payreq"]})
-
-    payment = json.loads(req.text)
+    payment = backend.pay_invoice(invoice = data["payreq"])
 
     def finished():
         data["callback"](payment)
@@ -97,8 +166,8 @@ class AskPaymentWindow(Gtk.Window):
 
     def payment_loaded(self, result):
         self.payment_data = result
-        if result["status"] == "success" and len(result["routes"]) > 0:
-            self.amt.set_label("Pay %s sats + %s sats fee to" % (result["decoded_req"]["num_satoshis"], result["routes"][0]["total_fees"]))
+        if result["status"] == "success":
+            self.amt.set_label("Pay %s sats to" % result["decoded_req"]["num_satoshis"])
             self.dst.set_label(result["decoded_req"]["destination"] + " ?")
 
             self.btn_handle = self.pay_btn.connect("clicked", self.pay_invoice)
@@ -106,12 +175,6 @@ class AskPaymentWindow(Gtk.Window):
             self.secs = 5
             self.pay_btn.set_label("Pay (%d)" % self.secs)
             self.countdown = GLib.timeout_add(1000, self.countdown_fn, None)
-
-        elif result["status"] == "success" and len(result["routes"]) == 0:
-            self.amt.set_label("No route found")
-            self.dst.set_label("")
-            self.pay_btn.set_label("Retry")
-            self.btn_handle = self.pay_btn.connect("clicked", self.retry)
 
         elif result["status"] == "invalid":
             self.amt.set_label("Invalid invoice")
