@@ -1,3 +1,5 @@
+#!/bin/bash
+
 if [ -r "/usr/local/etc/qpay/target_vm" ];
 then
 	TARGET_VM="`cat "/usr/local/etc/qpay/target_vm"`" || exit 1

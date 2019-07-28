@@ -3,7 +3,7 @@ Description=Qpay HTTP bridge
 
 [Service]
 Type=simple
-ExecStart=/usr/local.orig/bin/qpay -b
+ExecStart=/usr/bin/qpay -b
 
 [Install]
 WantedBy=multi-user.target

@@ -1,0 +1,19 @@
+Package: qpay-client
+Version: 0.2-1
+Maintainer: Martin Habovstiak <martin.habovstiak@gmail.com>
+Priority: optional
+Section: net
+Architecture: all
+Homepage: https://github.com/Kixunil/qpay
+Tag: interface::daemon, protocol::lnp, role:program, scope::utility, implemented-in::bash
+Depends: qubes-core-agent-qrexec
+Recommends: xsel, zbarcam
+Provides: lightning-network-uri-handler
+Description: Qpay - QubesOS-based Lightning Network client
+ A command line client for accessing Lightning Network wallet
+ in a separate Qubes OS domain from a less trusted domain. It should
+ be installed in all template VMs which are bases of LN-accessing
+ app VMs.
+ .
+ This package also provides an HTTP daemon which allows to access
+ the wallet from browser extensions using WebLN API.

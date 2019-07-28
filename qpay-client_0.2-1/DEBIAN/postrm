@@ -1,0 +1,8 @@
+#!/bin/bash
+
+if [ "$1" = "purge" -a -e /usr/share/debconf/confmodule ]; then
+    . /usr/share/debconf/confmodule
+    db_purge
+    rm -f /etc/qpay/target_vm
+    rmdir --ignore-fail-on-non-empty /etc/qpay/target_vm
+fi

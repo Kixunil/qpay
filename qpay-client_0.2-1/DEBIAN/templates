@@ -1,0 +1,5 @@
+Template: qpay-client/targetvm
+Type: string
+Description: Qubes domain providing qpay RPC
+ Please enter the name of the Qubes domain which runs Lightning Network wallet
+ or provides connection to one.

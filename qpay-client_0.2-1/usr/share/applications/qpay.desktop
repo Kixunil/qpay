@@ -1,0 +1,16 @@
+[Desktop Entry]
+Name=Qpay
+Version=1.1
+Comment=Prompt Lightning Network payment from less trusted VM
+GenericName=Lightning Network wallet
+Exec=/usr/bin/qpay %U
+# Strictly speaking this might be true but we don't want to show terminal
+# for links.
+Terminal=false
+X-MultipleArgs=false
+Type=Application
+NoDisplay=true
+MimeType=x-scheme-handler/lightning
+Keywords=lightning network,wallet,bitcoin
+StartupNotify=false
+Implements=lightning-network-payinvoice
