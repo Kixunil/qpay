@@ -25,26 +25,25 @@ macaroon and provides other VMs to request payments. When payment request is
 initiated, the lightningvm shows a simple dialog asking whether you want to
 perform the payment. This way no other VM can force you to spend money you don't want.
 
-Considering that there are **currently** no HW wallets for Lightnin and all other approaches don't use Qubes, this is **possibly** the most secure Lightning Network "wallet" available, **assuming no security bugs in qpay itself**!
+Considering that there are **currently** no HW wallets for Lightning and all other approaches don't use Qubes, this is **possibly** the most secure Lightning Network "wallet" available, **assuming no security bugs in qpay itself**!
 
 How to use
 ----------
 
 **Please carefuly review the code before use! It's not too long.**
 
-In order to use this tool, you need to install Qubes RPC server into the lightningvm - the VM you use to manage your remote node or run your local node (since if that is compromised, you have the exact same problem as if you had qpay compromised). A *very* simple install script is provided to do this.
+In order to use this tool, you need to install Qubes RPC server into the lightningvm - the VM you use to manage your remote node or run your local node (since if that is compromised, you have the exact same problem as if you had qpay compromised). A *very* simple install script (`install-rpc.sh`) is provided to do this.
 
 Then you need to create policy file in `dom0` - see `policy-example`.
 
-After that, you must install bridge script (found in `client/bridge`) into every
-VM you want to use the extension from. Installing it into template VM might be
-quicker.
+After that, you must install qpay command and bridge script (found in `client/bridge`) into every VM you want to use the extension from. Installing it into template VM is quicker.
+
+An installation script (`install-client.sh`) is provided to help with client installation. It's somewhat longer but handles both app VM and template VM for Fedora and Debian templates. In case of templates it builds and installs native package. This ensures easy removal, minimizes configuration steps and allows registering `lightning:` URI handler.
 
 Finally you need to install the extension. Right now, the extension isn't
 published, so you have to use temporary loading in `about:debugging`. Sorry.
 
-The extension partially implements WebLN API and hooks click events on
-`lightning:` URIs just as Joule does.
+The extension partially implements WebLN API.
 
 Security considerations
 -----------------------
