@@ -1,0 +1,58 @@
+#!/bin/bash
+
+# Configure this script here
+# Run qvm-usb list to find your camera and put its description here
+# This one is for Purism Librem cameras
+DEV_DESCRIPTION='QUANTA_HD_WebCam'
+# Which VM should do the scannning
+# Keep in mind that the VM will see the invoices you scan!
+VM='personal'
+
+function scan_devs() {
+	USB_DEV="`qvm-usb list | grep "$DEV_DESCRIPTION"`"
+	DEV_ID="`echo $USB_DEV | cut -d ' ' -f 1`"
+	ATTACHED="`echo $USB_DEV | awk '{ print $3 }'`"
+}
+
+scan_devs
+while [ -z "$DEV_ID" ];
+do
+	zenity --question --title='QR code reader' --text='The camera is not connecteed.' --ok-label='Retry' --cancel-label='Cancel' || exit 1
+	scan_devs
+done
+
+case "$ATTACHED" in
+	"")
+		qvm-usb attach "$VM" "$DEV_ID" || exit 1
+		DETACH=1
+		REATTACH=0
+		;;
+	"$VM")
+		DETACH=0
+		REATTACH=0
+		;;
+	*)
+		zenity --question --title='QR code reader' --text='The camera is attached to a different VM.' --ok-label='Reattach' --cancel-label='Cancel' || exit 1
+		qvm-usb detach "$ATTACHED" "$DEV_ID" || exit 1
+		if qvm-usb attach "$VM" "$DEV_ID";
+		then
+			DETACH=1
+			REATTACH=1
+		else
+			qvm-usb attach "$ATTACHED" "$DEV_ID"
+			exit 1
+		fi
+		;;
+esac
+
+qvm-run -p personal 'qpay -q'
+
+if [ $DETACH -eq 1 ];
+then
+	qvm-usb detach "$VM" "$DEV_ID" || exit 1
+fi
+
+if [ $REATTACH -eq 1 ];
+then
+	qvm-usb attach "$ATTACHED" "$DEV_ID" || exit 1
+fi

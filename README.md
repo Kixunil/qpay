@@ -45,6 +45,8 @@ published, so you have to use temporary loading in `about:debugging`. Sorry.
 
 The extension partially implements WebLN API.
 
+There's also a helper script for convenient QR code scanning. It goes to dom0 and handles attaching the camera and various edge cases. (Including disconnected camera - useful in case of Purism devices.)
+
 Security considerations
 -----------------------
 
