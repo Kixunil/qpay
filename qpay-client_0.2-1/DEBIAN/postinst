@@ -4,4 +4,6 @@
 
 db_get qpay-client/targetvm
 
+mkdir -p /etc/qpay
+
 echo -n "$RET" > /etc/qpay/target_vm
