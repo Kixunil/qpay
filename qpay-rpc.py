@@ -74,11 +74,13 @@ class EclairCommunicator:
                 return {"error": msg }
 
             resp = resp.json()
-            if resp[0]["status"] == "SUCCEEDED":
-                return { "payment_preimage": resp[0]["preimage"]}
+            if "status" in resp[0]:
+                status = resp[0]["status"]
+                if status["type"] == "sent":
+                    return { "payment_preimage": status["paymentPreimage"]}
 
-            if resp[0]["status"] == "FAILED":
-                return {"error": "Payment failed" }
+                if status["type"] == "failed":
+                    return {"error": "Payment failed: %s" % status["failureMessage"] }
 
             time.sleep(0.5)
 
